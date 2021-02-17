@@ -5,19 +5,21 @@ import sys
 from time import sleep
 import struct
 
-# to use UART0 (/dev/ttyAMA0), add this line of code
-# in config.txt under "[all]" then reboot
-# CODE: dtoverlay=pi3-miniuart-bt
+# sendCommand() reads the betaflight input and converts it into the channel data using linear conversion
+# betaflight range is 1000 to 2000 (input)
+# channel data is 192 to 1792 (output)
+def sendCommand(betaflight_data):
+    if betaflight_data < 1000:
+        input = 1000
+    elif betaflight_data > 2000:
+        input = 2000
+    else:
+        input = betaflight_data
+    channel_data = ((1792-192) / (2000-1000) * (input-1000)) + 192
+    return int(channel_data)
 
-ser = serial.Serial (
-        port='/dev/ttyAMA0',
-        parity=serial.PARITY_EVEN,
-        stopbits=serial.STOPBITS_TWO,
-        bytesize=serial.EIGHTBITS,
-        )
-ser.baudrate = 100000
 
-# //////////////////////////////////////////////////////////////////////////
+
 # https://www.geeksforgeeks.org/extract-k-bits-given-position-number/?ref=rp
 # Python program to extract k bits from a given 
 # position. 
@@ -27,11 +29,11 @@ ser.baudrate = 100000
 def bitExtracted(number, k, p):    
     return ( ((1 << k) - 1)  &  (number >> (p-1) ) );
 
-# //////////////////////////////////////////////////////////////////////////
+
+
 # https://www.geeksforgeeks.org/reverse-bits-positive-integer-number-python/
 # Function to reverse bits of positive   
 # integer number  
-    
 def reverseBits(num,bitSize):  
     
      # convert number into binary representation  
@@ -48,8 +50,9 @@ def reverseBits(num,bitSize):
      reverse = reverse + (bitSize - len(reverse))*'0'
 
      # converts reversed binary string into integer  
-     return (int(reverse,2))  
-
+     return (int(reverse,2))
+    
+# frameProcess() reads input for 16 channels and outputs channel data within an array of 25 bytes     
 def frameProcess(   ch0_data  = 1000, ch1_data  = 1050, ch2_data  = 1100, ch3_data  = 1150, ch4_data  = 1200, \
                     ch5_data  = 1250, ch6_data  = 1300, ch7_data  = 1350, ch8_data  = 1400, ch9_data  = 1450, \
                     ch10_data = 1500, ch11_data = 1550, ch12_data = 1600, ch13_data = 1650, ch14_data = 1700, \
@@ -486,53 +489,5 @@ def frameProcess(   ch0_data  = 1000, ch1_data  = 1050, ch2_data  = 1100, ch3_da
         
     return sendArray;
 
-try:
-    ch0_data  = 1055 ; ch1_data  = 0; ch2_data  = 0; ch3_data  = 0; ch4_data  = 0; \
-    ch5_data  = 0; ch6_data  = 0; ch7_data  = 0; ch8_data  = 0; ch9_data  = 0; \
-    ch10_data = 0; ch11_data = 0; ch12_data = 0; ch13_data = 0; ch14_data = 0; \
-    ch15_data = 1000
-
-    # use one of the following two while loops to send command
-    # first way to send command
-    print(ser)
-    print("Sent: ")
-    while True:
-        #send byte array
-        array = frameProcess( ch0_data, ch1_data, ch2_data, ch3_data, ch4_data, \
-                              ch5_data, ch6_data, ch7_data, ch8_data, ch9_data, \
-                              ch10_data, ch11_data, ch12_data, ch13_data, ch14_data, \
-                              ch15_data)
-        
-        for i in range(len(array)):
-            ser.write(struct.pack('>B',array[i]))
-            #print(array[i], end = '')
-           
-        #print("\n")    
-        time.sleep(0.1) # send command sendArray every 3 seconds for test
-    
-    # second way to send command
-    '''while True:
-        #send byte array
-        array = frameProcess( ch0_data  = 1500, ch1_data  = 1050, ch2_data  = 1100, ch3_data  = 1150, ch4_data  = 1200, \
-                              ch5_data  = 1250, ch6_data  = 1300, ch7_data  = 1350, ch8_data  = 1400, ch9_data  = 1450, \
-                              ch10_data = 1500, ch11_data = 1550, ch12_data = 1600, ch13_data = 1650, ch14_data = 1700, \
-                              ch15_data = 1750)
-        print('\n    array: ', end = '')
-        for i in range(len(array)):
-            print( array[i], '', end = '')
-
-        ser.write(array)
-        time.sleep(0.5)  # send command sendArray every 500 ms'''
-
-except Exception as e:
-    print(e)
-
-finally:
-    ser.close()
-
-
-
-
-
-
-
+# sendCommand() function test
+#print(sendCommand(1000))
